@@ -1,0 +1,13 @@
+[package]
+name = "data_catalog_backend"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+
+[dependencies]
+axum = "0.6"               # For building the web server and routing
+tokio = { version = "1", features = ["full"] }  # Asynchronous runtime
+serde = { version = "1.0", features = ["derive"] }  # Serialization/deserialization
+serde_json = "1.0"          # JSON parsing
+hyper = "0.14"             # HTTP handling
+tower = "0.4"              # Middleware support

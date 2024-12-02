@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-catalog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: data-catalog
+  template:
+    metadata:
+      labels:
+        app: data-catalog
+    spec:
+      containers:
+      - name: backend
+        image: backend-image
+        ports:
+        - containerPort: 3000
+      - name: frontend
+        image: frontend-image
+        ports:
+        - containerPort: 80
