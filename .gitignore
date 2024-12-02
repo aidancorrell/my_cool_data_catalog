@@ -1,0 +1,41 @@
+# Ignore Rust build files
+target/
+**/*.rs.bk
+**/*.rs.orig
+
+# Ignore Rust dependencies
+**/Cargo.lock
+**/Cargo.toml
+
+# Ignore Node modules (frontend dependencies)
+node_modules/
+
+# Ignore React build artifacts
+/build/
+dist/
+
+# Ignore logs
+*.log
+
+# Ignore environment files
+.env
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE specific files (VSCode, IntelliJ, etc.)
+.vscode/
+.idea/
+
+# Ignore Rust debug build files
+/debug/
+
+# Ignore .cargo directory (Rust specific)
+.cargo/
+
+# Ignore the frontend .env files
+frontend/.env*
+
+# Ignore the backend .env files
+backend/.env*
