@@ -10,7 +10,7 @@ pub struct Lineage {
 }
 
 pub async fn get_lineage(Path(model_id): Path<String>) -> Json<Lineage> {
-    let manifest = load_manifest("path/to/manifest.json").unwrap();
+    let manifest = load_manifest("./src/data/manifest.json").unwrap();
     let model = manifest
         .nodes
         .get(&model_id)

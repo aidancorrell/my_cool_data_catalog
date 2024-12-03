@@ -23,14 +23,14 @@ pub struct Dependencies {
 }
 
 pub async fn get_models() -> Json<Vec<String>> {
-    let manifest = load_manifest("path/to/manifest.json").unwrap();
+    let manifest = load_manifest("./src/data/manifest.json").unwrap();
     let models: Vec<String> = manifest.nodes.keys().cloned().collect();
     Json(models)
 }
 
 pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Node> {
     let model_id = path_params.0;
-    let manifest = load_manifest("path/to/manifest.json").unwrap();
+    let manifest = load_manifest("./src/data/manifest.json").unwrap();
 
     // Explicit dereference and clone
     if let Some(model) = manifest.nodes.get(&model_id) {
@@ -41,6 +41,7 @@ pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json
 }
 
 pub fn load_manifest(file_path: &str) -> Result<DbtManifest, std::io::Error> {
+    println!("Attempting to load manifest from: {}", file_path); // Log file path
     let data = fs::read_to_string(file_path)?;
     let manifest: DbtManifest = serde_json::from_str(&data)?;
     Ok(manifest)

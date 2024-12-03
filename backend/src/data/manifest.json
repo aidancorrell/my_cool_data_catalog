@@ -1,0 +1,26 @@
+{
+    "nodes": {
+      "model_1": {
+        "name": "model_1",
+        "description": "This is the first model.",
+        "depends_on": {
+          "nodes": ["model_2", "model_3"]
+        }
+      },
+      "model_2": {
+        "name": "model_2",
+        "description": "This is the second model.",
+        "depends_on": {
+          "nodes": []
+        }
+      },
+      "model_3": {
+        "name": "model_3",
+        "description": "This is the third model.",
+        "depends_on": {
+          "nodes": ["model_2"]
+        }
+      }
+    }
+  }
+  
