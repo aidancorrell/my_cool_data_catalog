@@ -8,7 +8,7 @@ backend/target/
 **/Cargo.toml
 
 # Ignore Node modules (frontend dependencies)
-frontend/node_modules/
+/node_modules/
 
 # Ignore React build artifacts
 /build/
