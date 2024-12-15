@@ -1,41 +1,48 @@
-# Ignore Rust build files
+# Ignore target directory (Rust build output)
 backend/target/
-**/*.rs.bk
-**/*.rs.orig
 
-# Ignore Rust dependencies
-**/Cargo.lock
-**/Cargo.toml
+# Ignore Rust's Cargo.toml.lock file (optional)
+backend/Cargo.lock
 
-# Ignore Node modules (frontend dependencies)
-/node_modules/
+# Ignore Rust's compiled binary files (optional)
+*.rs.bk
 
-# Ignore React build artifacts
-/build/
-dist/
+# Ignore Rust's editor files
+*.swp
 
-# Ignore logs
-*.log
-
-# Ignore environment files
-.env
-
-# Ignore system files
-.DS_Store
-Thumbs.db
-
-# Ignore IDE specific files (VSCode, IntelliJ, etc.)
+# Ignore IDE-specific files
 .vscode/
 .idea/
 
-# Ignore Rust debug build files
-/debug/
+# Ignore frontend dependencies (e.g., if using Node.js/React in the frontend)
+frontend/node_modules/
 
-# Ignore .cargo directory (Rust specific)
-.cargo/
+# Ignore build output and logs for the frontend (e.g., for React)
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/.cache/
 
-# Ignore the frontend .env files
-frontend/.env*
+# Ignore log files
+*.log
 
-# Ignore the backend .env files
-backend/.env*
+# Ignore OS-specific files (macOS, Linux, Windows)
+.DS_Store
+Thumbs.db
+
+# Ignore Rust's debug symbols (optional)
+*.dSYM
+
+# Ignore temporary files
+*.bak
+*.tmp
+
+# Ignore frontend specific files that aren't important (like dependency lock files, etc.)
+frontend/package-lock.json
+frontend/yarn.lock
+
+# Ignore the backend logs
+backend/logs/
+
+# Ignore configuration files for development tools
+*.iml
