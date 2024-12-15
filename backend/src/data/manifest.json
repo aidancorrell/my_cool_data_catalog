@@ -1,26 +1,59 @@
 {
-    "nodes": {
-      "model_1": {
-        "name": "model_1",
-        "description": "This is the first model.",
-        "depends_on": {
-          "nodes": ["model_2", "model_3"]
-        }
+  "nodes": {
+    "model_1": {
+      "name": "model_1",
+      "description": "Model 1 description",
+      "depends_on": {
+        "nodes": ["model_2", "model_3"]
       },
-      "model_2": {
-        "name": "model_2",
-        "description": "This is the second model.",
-        "depends_on": {
-          "nodes": []
-        }
+      "meta": {
+        "materialization": "table",
+        "tags": ["financial", "daily"]
+      }
+    },
+    "model_2": {
+      "name": "model_2",
+      "description": "Model 2 description",
+      "depends_on": {
+        "nodes": ["model_5"]
       },
-      "model_3": {
-        "name": "model_3",
-        "description": "This is the third model.",
-        "depends_on": {
-          "nodes": ["model_2"]
-        }
+      "meta": {
+        "materialization": "view",
+        "tags": ["raw", "source"]
+      }
+    },
+    "model_3": {
+      "name": "model_3",
+      "description": "Model 3 description",
+      "depends_on": {
+        "nodes": ["model_4"]
+      },
+      "meta": {
+        "materialization": "incremental",
+        "tags": ["staging"]
+      }
+    },
+    "model_4": {
+      "name": "model_4",
+      "description": "Model 4 description",
+      "depends_on": {
+        "nodes": ["model_5"]
+      },
+      "meta": {
+        "materialization": "table",
+        "tags": ["reporting"]
+      }
+    },
+    "model_5": {
+      "name": "model_5",
+      "description": "Model 5 description",
+      "depends_on": {
+        "nodes": []
+      },
+      "meta": {
+        "materialization": "table",
+        "tags": ["analysis"]
       }
     }
   }
-  
+}

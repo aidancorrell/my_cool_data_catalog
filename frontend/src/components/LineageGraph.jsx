@@ -11,18 +11,69 @@ const LineageGraph = ({ lineageData }) => {
         ...lineageData.nodes.map((node) => ({
             data: { id: node.id, label: node.id },
         })),
-        // Create edge elements
+        // Create edge elements with direction
         ...lineageData.links.map((link) => ({
             data: { source: link.source, target: link.target },
         })),
     ];
 
+    const cytoscapeStyles = [
+        {
+            selector: "node",
+            style: {
+                "background-color": "#0074D9",  // Node color
+                "label": "data(label)",         // Node label
+                "width": 40,                    // Width of nodes
+                "height": 40,                   // Height of nodes
+                "border-width": 2,              // Node border width
+                "border-color": "#ffffff",      // Node border color
+                "font-size": 12,                // Font size for node labels
+                "text-valign": "center",        // Center text vertically
+                "text-halign": "center",        // Center text horizontally
+                "font-weight": "bold",          // Bold font for labels
+            },
+        },
+        {
+            selector: "edge",
+            style: {
+                "width": 3,                    // Edge width
+                "line-color": "#ccc",          // Edge color
+                "target-arrow-color": "#ccc",  // Arrow color
+                "target-arrow-shape": "triangle",  // Arrow shape (triangle for directed edges)
+                "arrow-scale": 1.5,            // Arrow size
+                "label": "data(label)",        // Label for edge (optional)
+                "font-size": 10,               // Font size for edge labels
+                "opacity": 0.6,                // Edge opacity
+                "curve-style": "bezier",       // Smooth edges
+            },
+        },
+        {
+            selector: "node:selected",
+            style: {
+                "background-color": "#ff4136", // Highlight selected nodes
+            },
+        },
+        {
+            selector: "edge:selected",
+            style: {
+                "line-color": "#ff4136",     // Highlight selected edges
+                "target-arrow-color": "#ff4136",
+            },
+        },
+    ];
+
     return (
-        <div style={{ height: "600px", border: "1px solid #ccc" }}>
+        <div style={{ height: "600px", border: "1px solid #ccc", marginTop: "20px" }}>
             <CytoscapeComponent
                 elements={elements}
                 style={{ width: "100%", height: "100%" }}
-                layout={{ name: "breadthfirst" }} // Layout can be customized
+                layout={{
+                    name: "breadthfirst",  // Breadthfirst layout works well for DAGs
+                    directed: true,        // Makes the graph directed
+                    padding: 10,
+                    spacingFactor: 1.5,
+                    fit: true,
+                }}
                 cy={(cy) => {
                     // Example: Add event listeners for interactivity
                     cy.on("tap", "node", (evt) => {
@@ -30,198 +81,10 @@ const LineageGraph = ({ lineageData }) => {
                         alert(`Node clicked: ${nodeId}`);
                     });
                 }}
+                stylesheet={cytoscapeStyles} // Apply the styles here
             />
         </div>
     );
 };
 
 export default LineageGraph;
-
-
-
-// // import React from "react";
-// import React, { useEffect } from "react";
-// import { Graph } from "react-d3-graph";
-
-// const LineageGraph = ({ lineageData }) => {
-//     const graphConfig = {
-//         automaticRearrangeAfterDropNode: false,
-//         collapsible: false,
-//         directed: false,
-//         focusAnimationDuration: 0.75,
-//         focusZoom: 1,
-//         freezeAllDragEvents: false,
-//         height: 400,
-//         highlightDegree: 1,
-//         highlightOpacity: 1,
-//         linkHighlightBehavior: false,
-//         maxZoom: 8,
-//         minZoom: 0.1,
-//         nodeHighlightBehavior: true,
-//         panAndZoom: true,
-//         staticGraph: false,
-//         staticGraphWithDragAndDrop: false,
-//         width: 800,
-//         d3: {
-//           alphaTarget: 0.05,
-//           gravity: -100,
-//           linkLength: 100,
-//           linkStrength: 1,
-//           disableLinkForce: false
-//         },
-//         node: {
-//           color: "#d3d3d3",
-//           fontColor: "black",
-//           fontSize: 8,
-//           fontWeight: "normal",
-//           highlightColor: "SAME",
-//           highlightFontSize: 8,
-//           highlightFontWeight: "normal",
-//           highlightStrokeColor: "SAME",
-//           highlightStrokeWidth: "SAME",
-//           labelProperty: "id",
-//           mouseCursor: "pointer",
-//           opacity: 1,
-//           renderLabel: true,
-//           size: 200,
-//           strokeColor: "none",
-//           strokeWidth: 1.5,
-//           svg: "",
-//           symbolType: "circle"
-//         },
-//         link: {
-//           color: "#d3d3d3",
-//           fontColor: "black",
-//           fontSize: 8,
-//           fontWeight: "normal",
-//           highlightColor: "SAME",
-//           highlightFontSize: 8,
-//           highlightFontWeight: "normal",
-//           labelProperty: "label",
-//           mouseCursor: "pointer",
-//           opacity: 1,
-//           renderLabel: false,
-//           semanticStrokeWidth: false,
-//           strokeWidth: 1.5,
-//           markerHeight: 6,
-//           markerWidth: 6,
-//           strokeDasharray: 0,
-//           strokeDashoffset: 0,
-//           strokeLinecap: "butt"
-//         }
-//       };
-
-//   useEffect(() => {
-//     // Log lineageData to ensure it has the expected structure
-//     console.log("Lineage data:", lineageData);
-//   }, [lineageData]);
-
-//   // Check if lineageData is in the correct format
-//   if (!lineageData || !lineageData.nodes || !lineageData.links) {
-//     return <div>Error: Invalid lineage data format.</div>;
-//   }
-
-// class ErrorBoundary extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = { hasError: false };
-//     }
-
-//     static getDerivedStateFromError(error) {
-//         return { hasError: true };
-//     }
-
-//     componentDidCatch(error, errorInfo) {
-//         console.error("Error occurred:", error, errorInfo);
-//     }
-
-//     render() {
-//         if (this.state.hasError) {
-//             return <p>Something went wrong while rendering the graph.</p>;
-//         }
-//         return this.props.children;
-//     }
-// }
-
-    
-    
-
-// const handleNodeClick = (nodeId,event) => {
-//     if (!nodeId) {
-//         console.error("Invalid node clicked:", nodeId);
-//         return; // Prevent further actions if nodeId is invalid
-//     }
-//     console.log("Node clicked:", nodeId);
-//     alert(`You clicked on node: ${nodeId}`);  // Example of a simple action
-
-//     console.log("Event:", event); 
-
-//     console.log(nodeId || "Unknown node clicked");
-
-// };
-
-
-// const handleGraphClick = (event) => {
-//     if (event.target.tagName === "svg") {
-//         console.log("Clicked on empty space.");
-//         return;
-//     }
-
-//     if (!event.target) {
-//         console.log("White space clicked.");
-//         return;
-//     }
-
-//     console.log("Graph element clicked:", event.target);
-//     console.log("Graph whitespace clicked.");
-//     alert("Clicked on empty graph area.");
-// };
-
-// const handleNodeDrag = (nodeId, x, y) => {
-//     console.log(`Node ${nodeId} dragged to position (${x}, ${y})`);
-//     // Ensure the data is being correctly updated
-//     // For example, update the node's position in your lineageData
-// };
-
-// const handleNodeDrop = (nodeId) => {
-//     console.log(`Dropped node: ${nodeId}`);
-// };
-
-// const handleNodeDragEnd = (nodeId) => {
-//     console.log(`Finished dragging node: ${nodeId}`);
-// };
-
-
-
-//     return (
-//         <div 
-//         style={{
-//             height: "600px",
-//             width: "100%",
-//             border: "2px solid black", // Adds a solid black border
-//             borderRadius: "8px", // Optional: Makes the edges rounded
-//             padding: "10px", // Optional: Adds spacing inside the border
-//             boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)", // Optional: Adds a shadow for a nice effect
-//         }}
-//         >
-//             {lineageData ? (
-//             <ErrorBoundary>
-//                 <Graph
-//                     id="lineage-graph"
-//                     data={lineageData}
-//                     config={graphConfig}
-//                     onClickNode={handleNodeClick}
-//                     onClickGraph={handleGraphClick}
-//                     onNodeDrag={handleNodeDrag}
-//                     onNodeDrop={handleNodeDrop}
-//                     onNodeDragEnd={handleNodeDragEnd}
-//                 />
-//             </ErrorBoundary>
-//             ) : (
-//                 <p>Loading lineage graph...</p>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default LineageGraph;
