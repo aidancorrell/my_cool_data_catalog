@@ -11,6 +11,9 @@ COPY Cargo.toml Cargo.lock ./
 RUN cargo build --release
 RUN rm src/*.rs || true
 
+# install dbt
+RUN pip install dbt
+
 # Copy the source code into the container
 COPY ./src ./src
 

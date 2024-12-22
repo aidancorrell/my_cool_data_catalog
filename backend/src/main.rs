@@ -7,9 +7,14 @@ mod utils;
 use axum::{Router, Server};
 use std::net::SocketAddr;
 use tower_http::cors::{CorsLayer, Any};
+use env_logger;
+
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
+
     // Initialize routes
     let app = Router::new()
         .merge(routes::init_routes())
