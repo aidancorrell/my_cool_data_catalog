@@ -21,7 +21,8 @@ const LineagePage = () => {
       fetch(`http://127.0.0.1:3000/lineage/${startNode}/${endNode}`)
         .then((response) => response.json())
         .then((data) => {
-          console.log("Lineage Data:", data);
+          console.log("Fetched Lineage Data:", data); // Log fetched data
+        //   console.log("Lineage Data:", data);
           setLineageData(data);
         })
         .catch((error) => setError(error.message));

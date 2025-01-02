@@ -1,15 +1,23 @@
 use std::process::{Command, Output};
 use std::path::Path;
 use axum::{extract::Path as AxumPath, Json};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use log::{info, error};
+use crate::dbt::{run_dbt_command, clean_dbt_output, get_model_details};
 
-#[derive(Serialize)]
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Dependencies {
+    nodes: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ModelMetadata {
     name: String,
     schema: String,
     materialization: Option<String>,
     tags: Vec<String>,
+    depends_on: Dependencies,
 }
 
 #[derive(Serialize)]
@@ -17,76 +25,90 @@ pub struct Lineage {
     models: Vec<ModelMetadata>,
 }
 
-/// Helper function to run a DBT command
-fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<Output, String> {
-    if !Path::new(dbt_project_dir).exists() {
-        error!("DBT project directory does not exist: {}", dbt_project_dir);
-        return Err(format!("DBT project directory does not exist: {}", dbt_project_dir));
-    }
+/// Helper function to run a DBT command and clean the output
+// fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<Output, String> {
+//     if !Path::new(dbt_project_dir).exists() {
+//         error!("DBT project directory does not exist: {}", dbt_project_dir);
+//         return Err(format!("DBT project directory does not exist: {}", dbt_project_dir));
+//     }
 
-    // Construct the command for logging
-    let command_str = format!(
-        "dbt {} in directory: {}",
-        args.join(" "),
-        dbt_project_dir
-    );
+//     let command_str = format!("dbt {} in directory: {}", args.join(" "), dbt_project_dir);
+//     info!("Executing DBT command: {}", command_str);
 
-    // Log the command being executed
-    // info!("Executing DBT command: {}", command_str);
+//     let output = Command::new("dbt")
+//         .args(args)
+//         .current_dir(dbt_project_dir)
+//         .output()
+//         .map_err(|e| {
+//             error!("Failed to run DBT command: {}", e);
+//             format!("Failed to run dbt command: {}", e)
+//         })?;
 
-    // Execute the command
-    Command::new("dbt")
-        .args(args)
-        .current_dir(dbt_project_dir)
-        .output()
-        .map_err(|e| {
-            error!("Failed to run DBT command: {}", e);
-            format!("Failed to run dbt command: {}", e)
-        })
-}
+//     let stdout = String::from_utf8_lossy(&output.stdout);
+//     let stderr = String::from_utf8_lossy(&output.stderr);
 
+//     info!("DBT command stdout (raw): {}", stdout);
+//     if !stderr.is_empty() {
+//         error!("DBT command stderr: {}", stderr);
+//     }
 
-/// Parse DBT output to extract clean model metadata
-fn parse_dbt_output(output: &[u8]) -> Vec<ModelMetadata> {
-    String::from_utf8_lossy(output)
-        .lines()
-        .filter(|line| !line.starts_with("\u{1b}")) // Remove ANSI escape sequences
-        .filter(|line| !line.contains("Running with dbt") && !line.contains("Registered adapter"))
-        .filter(|line| line.contains(".")) // Only keep fully-qualified model names
-        .map(|line| {
-            // Extract model metadata
-            let parts: Vec<&str> = line.split('.').collect();
-            let name = parts.last().unwrap_or(&"").to_string();
-            let schema = parts.get(parts.len() - 2).unwrap_or(&"default").to_string();
-            ModelMetadata {
-                name,
-                schema,
-                materialization: None, // You can augment this with additional DBT commands if needed
-                tags: vec![],          // Include tags if available
-            }
-        })
-        .collect()
-}
+//     if !output.status.success() {
+//         return Err(format!(
+//             "DBT command failed with status: {}\nError: {}",
+//             output.status, stderr
+//         ));
+//     }
 
-/// Endpoint to get lineage using the `model_a+,+model_b` DBT syntax
+//     Ok(output)
+// }
+
 pub async fn get_lineage(AxumPath((start_model, end_model)): AxumPath<(String, String)>) -> Json<Lineage> {
     let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
+    let lineage_query = format!("{}+,+{}", start_model, end_model);
+    let args = &["ls", "--output", "json", "--models", &lineage_query];
 
-    // Use `model_a+,+model_b` syntax to get both upstream and downstream lineage
-    let dbt_args = &["ls", "--models", &format!("{}+,+{}", start_model, end_model)];
-    let lineage_output = match run_dbt_command(dbt_project_dir, dbt_args) {
-        Ok(output) if output.status.success() => parse_dbt_output(&output.stdout),
-        Ok(output) => {
-            error!("DBT command failed: {}", String::from_utf8_lossy(&output.stderr));
-            vec![]
+    // Fetch lineage models using DBT
+    let lineage_models: Vec<String> = match run_dbt_command(dbt_project_dir, args) {
+        Ok(cleaned_output) => {
+            match serde_json::from_str::<Vec<serde_json::Value>>(&cleaned_output) {
+                Ok(models) => models
+                    .into_iter()
+                    .filter_map(|m| m.get("name").and_then(|v| v.as_str().map(String::from)))
+                    .collect(),
+                Err(err) => {
+                    error!("Failed to parse DBT JSON output for lineage models: {}", err);
+                    vec![]
+                }
+            }
         }
         Err(err) => {
-            error!("Error running DBT command: {}", err);
+            error!("Failed to run DBT command for lineage: {}", err);
             vec![]
         }
     };
 
-    Json(Lineage { models: lineage_output })
+    // Retrieve detailed metadata for each lineage model
+    let mut detailed_models = Vec::new();
+    for model_name in lineage_models {
+        if let Json(model_details) = get_model_details(axum::extract::Path(model_name.clone())).await {
+            let model_metadata = ModelMetadata {
+                name: model_details.name,
+                schema: model_details.config.schema.unwrap_or_default(),
+                materialization: model_details.config.materialized.clone(),
+                tags: model_details.tags,
+                depends_on: Dependencies {
+                    nodes: model_details.depends_on.nodes.unwrap_or_default(),
+                },
+            };
+            detailed_models.push(model_metadata);
+        } else {
+            error!("Failed to fetch details for model: {}", model_name);
+        }        
+    }
+
+    info!("Lineage models with details: {:?}", detailed_models);
+
+    Json(Lineage { models: detailed_models })
 }
 
 

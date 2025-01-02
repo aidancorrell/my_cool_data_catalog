@@ -6,7 +6,7 @@ use log::{info, error};
 use std::collections::HashMap;
 
 // Updated Node struct
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Node {
     pub alias: String,
     pub config: Config,
@@ -19,7 +19,7 @@ pub struct Node {
     pub unique_id: String,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Config {
     pub access: Option<String>,
     pub alias: Option<String>,
@@ -51,26 +51,26 @@ pub struct Config {
     pub unique_key: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Contract {
     pub alias_types: Option<bool>,
     pub enforced: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Docs {
     pub node_color: Option<String>,
     pub show: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Dependencies {
     pub macros: Option<Vec<String>>,
     pub nodes: Option<Vec<String>>,
 }
 
 /// Clean the output of DBT command to remove logs and retain only JSON.
-fn clean_dbt_output(output: &[u8]) -> String {
+pub fn clean_dbt_output(output: &[u8]) -> String {
     let stdout = str::from_utf8(output).unwrap_or_default();
 
     // Keep only lines starting or ending with JSON markers
@@ -94,7 +94,7 @@ fn clean_dbt_output(output: &[u8]) -> String {
 
 
 /// Helper function to run a DBT command and clean its output.
-fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<String, String> {
+pub fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<String, String> {
     // Ensure the directory exists
     if !std::path::Path::new(dbt_project_dir).exists() {
         return Err(format!("DBT project directory does not exist: {}", dbt_project_dir));
@@ -174,46 +174,59 @@ pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json
     match run_dbt_command(dbt_project_dir, args) {
         Ok(cleaned_output) => {
             // Parse the JSON output
-            let models: Vec<serde_json::Value> = match serde_json::from_str(&cleaned_output) {
+            let json_output: serde_json::Value = match serde_json::from_str(&cleaned_output) {
                 Ok(parsed) => parsed,
                 Err(e) => {
-                    error!("Failed to parse DBT JSON output: {}", e);
+                    log::error!("Failed to parse DBT JSON output: {}", e);
                     panic!("Invalid DBT JSON structure");
                 }
             };
 
-            // Filter models by resource_type and name
-            let matching_model = models.into_iter().find(|model| {
-                model.get("resource_type")
-                    .and_then(|rt| rt.as_str())
+            // Handle single object (models 3-5 case)
+            if let Some(single_model) = json_output.as_object() {
+                if single_model.get("resource_type")
+                    .and_then(|v| v.as_str())
                     .map_or(false, |rt| rt == "model")
-                    && model.get("name")
-                        .and_then(|name| name.as_str())
+                    && single_model.get("name")
+                        .and_then(|v| v.as_str())
                         .map_or(false, |name| name == model_id)
-            });
-            
-            if let Some(details) = matching_model {
-                info!("Matching model JSON: {}", details);
-                let node: Node = match serde_json::from_value(details.clone()) {
-                    Ok(parsed_node) => parsed_node,
-                    Err(e) => {
-                        error!("Failed to deserialize model details for {}: {}", model_id, e);
-                        panic!("Invalid DBT JSON structure for model: {}", model_id);
-                    }
-                };
-                return Json(node);
+                {
+                    log::info!("Matching single model JSON: {:?}", single_model);
+                    let node: Node = serde_json::from_value(serde_json::Value::Object(single_model.clone()))
+                        .unwrap_or_else(|e| panic!("Failed to deserialize model details: {}", e));
+                    return Json(node);
+                }
             }
-             else {
-                error!("Model not found: {}", model_id);
-                panic!("Model not found");
+
+            // Handle array of objects (models 1-2 case)
+            if let Some(models) = json_output.as_array() {
+                if let Some(model) = models.iter().find(|m| {
+                    m.get("resource_type")
+                        .and_then(|v| v.as_str())
+                        .map_or(false, |rt| rt == "model")
+                        && m.get("name")
+                            .and_then(|v| v.as_str())
+                            .map_or(false, |name| name == model_id)
+                }) {
+                    log::info!("Matching model JSON in array: {}", model);
+                    let node: Node = serde_json::from_value(model.clone())
+                        .unwrap_or_else(|e| panic!("Failed to deserialize model details: {}", e));
+                    return Json(node);
+                }
             }
+
+            log::error!("Model not found or not of type 'model': {}", model_id);
+            panic!("Model not found or invalid type");
         }
         Err(err) => {
-            error!("Failed to fetch model details: {}", err);
+            log::error!("Failed to fetch model details: {}", err);
             panic!("Failed to fetch model details");
         }
     }
 }
+
+
+
 
 
 
