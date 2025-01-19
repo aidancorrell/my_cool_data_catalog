@@ -62,18 +62,37 @@ pub struct Lineage {
 //     Ok(output)
 // }
 
-pub async fn get_lineage(AxumPath((start_model, end_model)): AxumPath<(String, String)>) -> Json<Lineage> {
+pub async fn get_lineage(
+    AxumPath((start_model, end_model)): AxumPath<(String, String)>,
+) -> Json<Lineage> {
     let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
     let lineage_query = format!("{}+,+{}", start_model, end_model);
     let args = &["ls", "--output", "json", "--models", &lineage_query];
 
     // Fetch lineage models using DBT
-    let lineage_models: Vec<String> = match run_dbt_command(dbt_project_dir, args) {
+    let lineage_models: Vec<ModelMetadata> = match run_dbt_command(dbt_project_dir, args) {
         Ok(cleaned_output) => {
             match serde_json::from_str::<Vec<serde_json::Value>>(&cleaned_output) {
                 Ok(models) => models
                     .into_iter()
-                    .filter_map(|m| m.get("name").and_then(|v| v.as_str().map(String::from)))
+                    .filter_map(|model| {
+                        let name = model.get("name")?.as_str()?.to_string();
+                        let depends_on = model
+                            .get("depends_on")
+                            .and_then(|d| d.get("nodes"))
+                            .and_then(|n| n.as_array())
+                            .map_or(vec![], |nodes| {
+                                nodes.iter().filter_map(|node| node.as_str().map(String::from)).collect()
+                            });
+
+                        Some(ModelMetadata {
+                            name,
+                            schema: String::new(),        // Empty as metadata is separate
+                            materialization: None,        // Empty as metadata is separate
+                            tags: vec![],                 // Empty as metadata is separate
+                            depends_on: Dependencies { nodes: depends_on },
+                        })
+                    })
                     .collect(),
                 Err(err) => {
                     error!("Failed to parse DBT JSON output for lineage models: {}", err);
@@ -87,29 +106,10 @@ pub async fn get_lineage(AxumPath((start_model, end_model)): AxumPath<(String, S
         }
     };
 
-    // Retrieve detailed metadata for each lineage model
-    let mut detailed_models = Vec::new();
-    for model_name in lineage_models {
-        if let Json(model_details) = get_model_details(axum::extract::Path(model_name.clone())).await {
-            let model_metadata = ModelMetadata {
-                name: model_details.name,
-                schema: model_details.config.schema.unwrap_or_default(),
-                materialization: model_details.config.materialized.clone(),
-                tags: model_details.tags,
-                depends_on: Dependencies {
-                    nodes: model_details.depends_on.nodes.unwrap_or_default(),
-                },
-            };
-            detailed_models.push(model_metadata);
-        } else {
-            error!("Failed to fetch details for model: {}", model_name);
-        }        
-    }
-
-    info!("Lineage models with details: {:?}", detailed_models);
-
-    Json(Lineage { models: detailed_models })
+    Json(Lineage { models: lineage_models })
 }
+
+
 
 
 

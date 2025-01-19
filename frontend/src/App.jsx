@@ -25,7 +25,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/data-sources" element={<DataSourcesPage />} />
           <Route path="/lineage" element={<LineagePage />} />
-          <Route path="/model/:modelId" element={<ModelDetailsPage />} />
+          <Route path="/model-details/:modelName" element={<ModelDetailsPage />} />
         </Routes>
       </div>
     </Router>

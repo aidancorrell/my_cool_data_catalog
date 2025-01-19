@@ -140,147 +140,186 @@ pub fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<String, S
 
 
 pub async fn get_models() -> Json<Vec<String>> {
-    let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
-    let args = &["ls", "--output", "json"];
+    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
 
-    match run_dbt_command(dbt_project_dir, args) {
-        Ok(cleaned_output) => {
-            let models: Vec<serde_json::Value> = match serde_json::from_str(&cleaned_output) {
+    match fs::read_to_string(cache_path) {
+        Ok(enriched_manifest) => {
+            let manifest_json: serde_json::Value = match serde_json::from_str(&enriched_manifest) {
                 Ok(parsed) => parsed,
                 Err(e) => {
-                    error!("Failed to parse DBT JSON output: {}", e);
+                    error!("Failed to parse enriched manifest: {}", e);
                     return Json(vec![]);
                 }
             };
 
-            // Extract model names from either an object or array
-            let model_names = models
-                .into_iter()
-                .filter_map(|model| model.get("name").and_then(|name| name.as_str()).map(String::from))
+            // Extract model names
+            let model_names = manifest_json["nodes"]
+                .as_object()
+                .unwrap_or(&serde_json::Map::new())
+                .iter()
+                .filter_map(|(_, node)| {
+                    if node["resource_type"] == "model" {
+                        node["name"].as_str().map(String::from)
+                    } else {
+                        None
+                    }
+                })
                 .collect::<Vec<_>>();
 
             Json(model_names)
         }
-        Err(err) => {
-            error!("Failed to fetch DBT models: {}", err);
+        Err(e) => {
+            error!("Failed to read enriched manifest: {}", e);
             Json(vec![])
         }
     }
 }
 
+
 pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0;
-    let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
-    let manifest_file_path = format!("{}/target/manifest.json", dbt_project_dir);
+    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
 
-    // Step 1: Read the generated manifest.json file
-    let manifest_data = fs::read_to_string(&manifest_file_path)
-        .expect("Failed to read manifest.json. Ensure 'dbt docs generate' has been run.");
-
+    // Load the enriched manifest
+    let manifest_data = fs::read_to_string(cache_path)
+        .expect("Failed to read enriched_manifest.json. Ensure the cache is built.");
     let manifest_json: Value = serde_json::from_str(&manifest_data)
-        .expect("Failed to parse manifest.json");
+        .expect("Failed to parse enriched_manifest.json");
 
-    // Step 2: Locate the model by unique_id
-    if let Some(nodes) = manifest_json.get("nodes").and_then(|n| n.as_object()) {
-        if let Some(model) = nodes.values().find(|node| {
-            node.get("unique_id")
-                .and_then(|id| id.as_str())
-                .map_or(false, |id| id.ends_with(&model_id))
-        }) {
-            let columns = model
-                .get("columns")
-                .and_then(|cols| cols.as_object())
-                .map(|cols| {
-                    cols.iter()
-                        .map(|(col_name, col_data)| {
-                            json!({
-                                "name": col_name,
-                                "description": col_data.get("description").unwrap_or(&Value::String("No description available".to_string())),
-                                "type": col_data.get("data_type").unwrap_or(&Value::String("Unknown".to_string())),
-                                "tests": col_data.get("tests").unwrap_or(&Value::Array(vec![]))
-                            })
+    // Extract nodes
+    let nodes = manifest_json
+        .get("nodes")
+        .and_then(|n| n.as_object())
+        .expect("Nodes not found in enriched_manifest.json");
+
+    // Find the model
+    if let Some(model) = nodes.values().find(|node| {
+        node.get("unique_id")
+            .and_then(|id| id.as_str())
+            .map_or(false, |id| id.ends_with(&model_id))
+    }) {
+        // Extract general information
+        let general = json!({
+            "name": model.get("name").unwrap_or(&json!("Unknown")),
+            "description": model.get("description").unwrap_or(&json!("No description available")),
+            "materialized": model.get("config")
+                .and_then(|c| c.get("materialized"))
+                .unwrap_or(&json!("Unknown")),
+            "schema": model.get("schema").unwrap_or(&json!("Unknown")),
+            "database": model.get("database").unwrap_or(&json!("Unknown")),
+            "primary_keys": model.get("primary_key").unwrap_or(&json!([])),
+            "tags": model.get("tags").unwrap_or(&json!([]))
+        });
+
+        // Extract columns
+        let columns = model
+            .get("columns")
+            .and_then(|c| c.as_object())
+            .map(|cols| {
+                cols.values()
+                    .map(|col| {
+                        json!({
+                            "name": col.get("name").unwrap_or(&json!("Unknown")),
+                            "type": col.get("type").unwrap_or(&json!("Unknown")),
+                            "description": col.get("comment").unwrap_or(&json!("No description available"))
                         })
-                        .collect::<Vec<Value>>()
-                })
-                .unwrap_or(vec![]);
+                    })
+                    .collect::<Vec<Value>>()
+            })
+            .unwrap_or_else(|| vec![]);
 
-            let enriched_model = json!({
-                "name": model.get("name").unwrap_or(&Value::String("Unknown".to_string())),
-                "description": model.get("description").unwrap_or(&Value::String("No description available".to_string())),
-                "materialization": model.get("config").and_then(|c| c.get("materialized")).unwrap_or(&Value::String("Unknown".to_string())),
-                "schema": model.get("schema").unwrap_or(&Value::String("Unknown".to_string())),
-                "database": model.get("database").unwrap_or(&Value::String("Unknown".to_string())),
-                "columns": columns
-            });
+        // Extract SQL-related information
+        let sql = json!({
+            "relation_name": model.get("relation_name").unwrap_or(&json!("Unknown")),
+            "raw_code": model.get("raw_code").unwrap_or(&json!("No SQL code available"))
+        });
 
-            return Json(enriched_model);
-        }
+        // Combine cleaned data
+        let cleaned_model = json!({
+            "general": general,
+            "columns": columns,
+            "sql": sql
+        });
+
+        return Json(cleaned_model);
     }
 
-    panic!("Model not found in manifest.json: {}", model_id);
+    panic!("Model not found in enriched_manifest.json: {}", model_id);
 }
 
 
 
+pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Value> {
+    let model_id = path_params.0; // e.g., "my_first_dbt_model"
+    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
 
-pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Node> {
-    let model_id = path_params.0;
-    let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
-    let args = &["ls", "--output", "json", "--select", &model_id];
+    // Load the enriched manifest
+    let manifest_data = fs::read_to_string(cache_path)
+        .expect("Failed to read enriched_manifest.json. Ensure the cache is built.");
+    let manifest_json: Value = serde_json::from_str(&manifest_data)
+        .expect("Failed to parse enriched_manifest.json");
 
-    match run_dbt_command(dbt_project_dir, args) {
-        Ok(cleaned_output) => {
-            // Parse the JSON output
-            let json_output: serde_json::Value = match serde_json::from_str(&cleaned_output) {
-                Ok(parsed) => parsed,
-                Err(e) => {
-                    log::error!("Failed to parse DBT JSON output: {}", e);
-                    panic!("Invalid DBT JSON structure");
-                }
-            };
+    // Extract nodes
+    let nodes = manifest_json
+        .get("nodes")
+        .and_then(|n| n.as_object())
+        .expect("Nodes not found in enriched_manifest.json");
 
-            // Handle single object (models 3-5 case)
-            if let Some(single_model) = json_output.as_object() {
-                if single_model.get("resource_type")
-                    .and_then(|v| v.as_str())
-                    .map_or(false, |rt| rt == "model")
-                    && single_model.get("name")
-                        .and_then(|v| v.as_str())
-                        .map_or(false, |name| name == model_id)
-                {
-                    log::info!("Matching single model JSON: {:?}", single_model);
-                    let node: Node = serde_json::from_value(serde_json::Value::Object(single_model.clone()))
-                        .unwrap_or_else(|e| panic!("Failed to deserialize model details: {}", e));
-                    return Json(node);
-                }
-            }
+    // Locate the model by matching `unique_id` (may include prefixes)
+    if let Some(model) = nodes.values().find(|node| {
+        node.get("unique_id")
+            .and_then(|id| id.as_str())
+            .map_or(false, |id| id.ends_with(&model_id)) // Match suffix for flexibility
+    }) {
+        // Extract general information
+        let general = json!({
+            "name": model.get("name").unwrap_or(&json!("Unknown")),
+            "description": model.get("description").unwrap_or(&json!("No description available")),
+            "materialized": model.get("config")
+                .and_then(|c| c.get("materialized"))
+                .unwrap_or(&json!("Unknown")),
+            "schema": model.get("schema").unwrap_or(&json!("Unknown")),
+            "database": model.get("database").unwrap_or(&json!("Unknown")),
+            "primary_keys": model.get("primary_key").unwrap_or(&json!([])),
+            "tags": model.get("tags").unwrap_or(&json!([]))
+        });
 
-            // Handle array of objects (models 1-2 case)
-            if let Some(models) = json_output.as_array() {
-                if let Some(model) = models.iter().find(|m| {
-                    m.get("resource_type")
-                        .and_then(|v| v.as_str())
-                        .map_or(false, |rt| rt == "model")
-                        && m.get("name")
-                            .and_then(|v| v.as_str())
-                            .map_or(false, |name| name == model_id)
-                }) {
-                    log::info!("Matching model JSON in array: {}", model);
-                    let node: Node = serde_json::from_value(model.clone())
-                        .unwrap_or_else(|e| panic!("Failed to deserialize model details: {}", e));
-                    return Json(node);
-                }
-            }
+        // Extract columns
+        let columns = model
+            .get("columns")
+            .and_then(|c| c.as_object())
+            .map(|cols| {
+                cols.values()
+                    .map(|col| {
+                        json!({
+                            "name": col.get("name").unwrap_or(&json!("Unknown")),
+                            "type": col.get("type").unwrap_or(&json!("Unknown")),
+                            "description": col.get("comment").unwrap_or(&json!("No description available"))
+                        })
+                    })
+                    .collect::<Vec<Value>>()
+            })
+            .unwrap_or_else(|| vec![]);
 
-            log::error!("Model not found or not of type 'model': {}", model_id);
-            panic!("Model not found or invalid type");
-        }
-        Err(err) => {
-            log::error!("Failed to fetch model details: {}", err);
-            panic!("Failed to fetch model details");
-        }
+        // Extract SQL-related information
+        let sql = json!({
+            "relation_name": model.get("relation_name").unwrap_or(&json!("Unknown")),
+            "raw_code": model.get("raw_code").unwrap_or(&json!("No SQL code available"))
+        });
+
+        // Combine cleaned data
+        let cleaned_model = json!({
+            "general": general,
+            "columns": columns,
+            "sql": sql
+        });
+
+        return Json(cleaned_model);
     }
+
+    panic!("Model not found in enriched manifest: {}", model_id);
 }
+
 
 
 

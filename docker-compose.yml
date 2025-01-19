@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   backend:
@@ -6,13 +6,23 @@ services:
       context: ./backend
     ports:
       - "3000:3000"
-    env_file:
-      - ./backend/.env
+    volumes:
+      - ./backend/cache:/backend/cache
+    depends_on:
+      - scheduler
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend/cache:/backend/cache
+    command: ["cron", "-f"]
 
   frontend:
     build:
       context: ./frontend
     ports:
-      - "3001:80"
-    env_file:
-      - ./frontend/.env
+      - "3001:3001" # Expose the front-end service
+    depends_on:
+      - backend
