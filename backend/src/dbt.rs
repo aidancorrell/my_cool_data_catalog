@@ -1,6 +1,7 @@
 use axum::Json;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
+use serde_yaml::Value as YamlValue;
 use core::str;
 use std::{fs, path::Path, process::{Command, Output}};
 use log::{info, error};
@@ -167,56 +168,58 @@ pub async fn get_models() -> Json<Vec<String>> {
     }
 }
 
-// this needs a valid snowflake connection to kick off
 pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0;
     let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
-    let catalog_file_path = format!("{}/target/catalog.json", dbt_project_dir);
+    let manifest_file_path = format!("{}/target/manifest.json", dbt_project_dir);
 
-    // Step 1: Run `dbt docs generate`
-    let docs_output = Command::new("dbt")
-        .arg("docs")
-        .arg("generate")
-        .current_dir(dbt_project_dir)
-        .output();
+    // Step 1: Read the generated manifest.json file
+    let manifest_data = fs::read_to_string(&manifest_file_path)
+        .expect("Failed to read manifest.json. Ensure 'dbt docs generate' has been run.");
 
-    match docs_output {
-        Ok(output) => {
-            if !output.status.success() {
-                error!(
-                    "Failed to generate docs: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                );
-                panic!("Failed to run 'dbt docs generate'. Check your DBT setup.");
-            }
-            info!("Successfully ran 'dbt docs generate'.");
-        }
-        Err(e) => {
-            error!("Error running 'dbt docs generate': {}", e);
-            panic!("Error running 'dbt docs generate'. Ensure DBT is installed.");
-        }
-    }
+    let manifest_json: Value = serde_json::from_str(&manifest_data)
+        .expect("Failed to parse manifest.json");
 
-    // Step 2: Read the generated catalog.json file
-    let catalog_data = fs::read_to_string(&catalog_file_path)
-        .expect("Failed to read catalog.json. Ensure 'dbt docs generate' has been run.");
-
-    let catalog_json: Value = serde_json::from_str(&catalog_data)
-        .expect("Failed to parse catalog.json");
-
-    // Step 3: Locate the model by unique_id
-    if let Some(nodes) = catalog_json.get("nodes").and_then(|n| n.as_object()) {
+    // Step 2: Locate the model by unique_id
+    if let Some(nodes) = manifest_json.get("nodes").and_then(|n| n.as_object()) {
         if let Some(model) = nodes.values().find(|node| {
             node.get("unique_id")
                 .and_then(|id| id.as_str())
                 .map_or(false, |id| id.ends_with(&model_id))
         }) {
-            return Json(model.clone());
+            let columns = model
+                .get("columns")
+                .and_then(|cols| cols.as_object())
+                .map(|cols| {
+                    cols.iter()
+                        .map(|(col_name, col_data)| {
+                            json!({
+                                "name": col_name,
+                                "description": col_data.get("description").unwrap_or(&Value::String("No description available".to_string())),
+                                "type": col_data.get("data_type").unwrap_or(&Value::String("Unknown".to_string())),
+                                "tests": col_data.get("tests").unwrap_or(&Value::Array(vec![]))
+                            })
+                        })
+                        .collect::<Vec<Value>>()
+                })
+                .unwrap_or(vec![]);
+
+            let enriched_model = json!({
+                "name": model.get("name").unwrap_or(&Value::String("Unknown".to_string())),
+                "description": model.get("description").unwrap_or(&Value::String("No description available".to_string())),
+                "materialization": model.get("config").and_then(|c| c.get("materialized")).unwrap_or(&Value::String("Unknown".to_string())),
+                "schema": model.get("schema").unwrap_or(&Value::String("Unknown".to_string())),
+                "database": model.get("database").unwrap_or(&Value::String("Unknown".to_string())),
+                "columns": columns
+            });
+
+            return Json(enriched_model);
         }
     }
 
-    panic!("Model not found in catalog.json: {}", model_id);
+    panic!("Model not found in manifest.json: {}", model_id);
 }
+
 
 
 

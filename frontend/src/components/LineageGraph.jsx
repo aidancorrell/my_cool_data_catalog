@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import CytoscapeComponent from "react-cytoscapejs";
 
 const LineageGraph = ({ lineageData }) => {
   const [graphElements, setGraphElements] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
   const [metadata, setMetadata] = useState(null);
+  const [modelDocs, setModelDocs] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const prepareGraphData = () => {
@@ -32,14 +36,22 @@ const LineageGraph = ({ lineageData }) => {
   }, [lineageData]);
 
   useEffect(() => {
-    if (selectedModel) {
-      fetch(`http://127.0.0.1:3000/models/${selectedModel}`)
-        .then((response) => response.json())
-        .then((data) => setMetadata(data))
-        .catch((error) =>
-          console.error("Failed to fetch metadata for model:", selectedModel, error)
-        );
-    }
+    const fetchMetadata = async () => {
+      if (selectedModel) {
+        try {
+          const [metadataResponse, modelDocsResponse] = await Promise.all([
+            fetch(`http://127.0.0.1:3000/models/${selectedModel}`).then((res) => res.json()),
+            fetch(`http://127.0.0.1:3000/model_docs/${selectedModel}`).then((res) => res.json()),
+          ]);
+          setMetadata(metadataResponse);
+          setModelDocs(modelDocsResponse);
+        } catch (error) {
+          console.error("Failed to fetch model metadata or docs:", error);
+        }
+      }
+    };
+
+    fetchMetadata();
   }, [selectedModel]);
 
   const panelStyles = {
@@ -53,6 +65,68 @@ const LineageGraph = ({ lineageData }) => {
     width: "300px",
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
     zIndex: 1000,
+    overflowY: "auto",
+    maxHeight: "90vh",
+  };
+
+  const renderMetadataPanel = () => {
+    if (!metadata || !modelDocs) return null;
+
+    const { columns, metadata: docMetadata, stats } = modelDocs;
+
+    return (
+      <div style={panelStyles}>
+        <h2>{metadata.name}</h2>
+        <p>
+          <strong>Description:</strong> {docMetadata?.comment || "No description available."}
+        </p>
+        <p>
+          <strong>Materialized Type:</strong> {metadata.config?.materialized || "N/A"}
+        </p>
+        <p>
+          <strong>Database:</strong> {docMetadata?.database || "N/A"}
+        </p>
+        <p>
+          <strong>Schema:</strong> {docMetadata?.schema || "N/A"}
+        </p>
+        <p>
+          <strong>Tags:</strong> {metadata.tags?.length ? metadata.tags.join(", ") : "None"}
+        </p>
+        <p>
+          <strong>Has Stats?</strong> {stats?.has_stats?.value ? "Yes" : "No"}
+        </p>
+
+        <h3>Columns</h3>
+        {columns ? (
+          <ul>
+            {Object.entries(columns).map(([columnName, details]) => (
+              <li key={columnName}>
+                <strong>{details.name}</strong>: {details.type}
+                {details.comment && <p>{details.comment}</p>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No columns available.</p>
+        )}
+
+        {/* Add a link to the comprehensive metadata page */}
+        <button
+          style={{
+            marginTop: "10px",
+            padding: "10px 20px",
+            backgroundColor: "#0074D9",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+          onClick={() => navigate(`/model/${selectedModel}`)}
+        >
+          View Full Details
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -74,7 +148,6 @@ const LineageGraph = ({ lineageData }) => {
           });
         }}
         stylesheet={[
-          // Node styling as boxes with shadow
           {
             selector: "node",
             style: {
@@ -94,7 +167,6 @@ const LineageGraph = ({ lineageData }) => {
               "box-shadow": "0px 4px 6px rgba(0, 0, 0, 0.1)",
             },
           },
-          // Edge styling
           {
             selector: "edge",
             style: {
@@ -106,48 +178,14 @@ const LineageGraph = ({ lineageData }) => {
               "curve-style": "bezier",
             },
           },
-          // Styling for selected nodes
-          {
-            selector: "node:selected",
-            style: {
-              "background-color": "#FF4136",
-              "border-color": "#FF4136",
-              "box-shadow": "0px 4px 8px rgba(255, 65, 54, 0.3)",
-            },
-          },
         ]}
       />
-
-      {metadata && (
-        <div style={panelStyles}>
-          <h2>{metadata.name}</h2>
-          <p>
-            <strong>Description:</strong> {metadata.description || "No description available."}
-          </p>
-          <p>
-            <strong>Materialized Type:</strong> {metadata.config?.materialized || "N/A"}
-          </p>
-          <p>
-            <strong>Tags:</strong> {metadata.tags?.length ? metadata.tags.join(", ") : "None"}
-          </p>
-          <h3>Columns</h3>
-          <ul>
-            {metadata.columns?.map((column) => (
-              <li key={column.name}>
-                <strong>{column.name}</strong>: {column.description || "No description available"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {renderMetadataPanel()}
     </div>
   );
 };
 
 export default LineageGraph;
-
-
-
 
 
 // import React, { useState, useEffect } from "react";

@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import DataSourcesPage from './pages/DataSourcesPage';
 import LineagePage from './pages/LineagePage';
+import ModelDetailsPage from "./pages/ModelDetailsPage";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/data-sources" element={<DataSourcesPage />} />
           <Route path="/lineage" element={<LineagePage />} />
+          <Route path="/model/:modelId" element={<ModelDetailsPage />} />
         </Routes>
       </div>
     </Router>
