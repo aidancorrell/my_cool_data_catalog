@@ -1,5 +1,6 @@
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use core::str;
 use std::{fs, path::Path, process::{Command, Output}};
 use log::{info, error};
@@ -165,6 +166,59 @@ pub async fn get_models() -> Json<Vec<String>> {
         }
     }
 }
+
+// this needs a valid snowflake connection to kick off
+pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Value> {
+    let model_id = path_params.0;
+    let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
+    let catalog_file_path = format!("{}/target/catalog.json", dbt_project_dir);
+
+    // Step 1: Run `dbt docs generate`
+    let docs_output = Command::new("dbt")
+        .arg("docs")
+        .arg("generate")
+        .current_dir(dbt_project_dir)
+        .output();
+
+    match docs_output {
+        Ok(output) => {
+            if !output.status.success() {
+                error!(
+                    "Failed to generate docs: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                panic!("Failed to run 'dbt docs generate'. Check your DBT setup.");
+            }
+            info!("Successfully ran 'dbt docs generate'.");
+        }
+        Err(e) => {
+            error!("Error running 'dbt docs generate': {}", e);
+            panic!("Error running 'dbt docs generate'. Ensure DBT is installed.");
+        }
+    }
+
+    // Step 2: Read the generated catalog.json file
+    let catalog_data = fs::read_to_string(&catalog_file_path)
+        .expect("Failed to read catalog.json. Ensure 'dbt docs generate' has been run.");
+
+    let catalog_json: Value = serde_json::from_str(&catalog_data)
+        .expect("Failed to parse catalog.json");
+
+    // Step 3: Locate the model by unique_id
+    if let Some(nodes) = catalog_json.get("nodes").and_then(|n| n.as_object()) {
+        if let Some(model) = nodes.values().find(|node| {
+            node.get("unique_id")
+                .and_then(|id| id.as_str())
+                .map_or(false, |id| id.ends_with(&model_id))
+        }) {
+            return Json(model.clone());
+        }
+    }
+
+    panic!("Model not found in catalog.json: {}", model_id);
+}
+
+
 
 pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Node> {
     let model_id = path_params.0;

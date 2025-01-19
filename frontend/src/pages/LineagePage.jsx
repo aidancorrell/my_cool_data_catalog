@@ -20,11 +20,7 @@ const LineagePage = () => {
     if (startNode && endNode) {
       fetch(`http://127.0.0.1:3000/lineage/${startNode}/${endNode}`)
         .then((response) => response.json())
-        .then((data) => {
-          console.log("Fetched Lineage Data:", data); // Log fetched data
-        //   console.log("Lineage Data:", data);
-          setLineageData(data);
-        })
+        .then((data) => setLineageData(data))
         .catch((error) => setError(error.message));
     }
   }, [startNode, endNode]);
@@ -32,98 +28,50 @@ const LineagePage = () => {
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Data Lineage</h1>
-      <div style={{ marginBottom: "20px" }}>
-        <label>
-          Start Node:
-          <Select
-            options={models.map((model) => ({
-              value: model,
-              label: model,
-            }))}
-            value={startNode ? { value: startNode, label: startNode } : null}
-            onChange={(selectedOption) => setStartNode(selectedOption?.value || null)}
-            placeholder="Select or type to search..."
-            isClearable
-          />
-        </label>
-        <label>
-          End Node:
-          <Select
-            options={models.map((model) => ({
-              value: model,
-              label: model,
-            }))}
-            value={endNode ? { value: endNode, label: endNode } : null}
-            onChange={(selectedOption) => setEndNode(selectedOption?.value || null)}
-            placeholder="Select or type to search..."
-            isClearable
-          />
-        </label>
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-100 border-r p-4">
+        <h1 className="text-xl font-bold text-gray-700 mb-4">Data Lineage</h1>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Start Node:</label>
+            <Select
+              options={models.map((model) => ({
+                value: model,
+                label: model,
+              }))}
+              value={startNode ? { value: startNode, label: startNode } : null}
+              onChange={(selectedOption) => setStartNode(selectedOption?.value || null)}
+              placeholder="Select or type to search..."
+              isClearable
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600">End Node:</label>
+            <Select
+              options={models.map((model) => ({
+                value: model,
+                label: model,
+              }))}
+              value={endNode ? { value: endNode, label: endNode } : null}
+              onChange={(selectedOption) => setEndNode(selectedOption?.value || null)}
+              placeholder="Select or type to search..."
+              isClearable
+            />
+          </div>
+        </div>
       </div>
 
-      <h2>Lineage Graph</h2>
-      {lineageData ? (
-        <LineageGraph lineageData={lineageData} />
-      ) : (
-        <p>Select both a start and end node to view the lineage graph.</p>
-      )}
+      {/* Main Content */}
+      <div className="flex-grow bg-gray-50 p-6">
+        {lineageData ? (
+          <LineageGraph lineageData={lineageData} />
+        ) : (
+          <p className="text-gray-600">Select both a start and end node to view the lineage graph.</p>
+        )}
+      </div>
     </div>
   );
 };
 
 export default LineagePage;
-
-
-
-// import React, { useEffect, useState } from "react";
-// import LineageGraph from "../components/LineageGraph";
-
-// const LineagePage = () => {
-//     const [models, setModels] = useState([]);
-//     const [lineageData, setLineageData] = useState(null);
-
-//     useEffect(() => {
-//         // Fetch models from the backend
-//         fetch("http://127.0.0.1:3000/models")
-//             .then((response) => response.json())
-//             .then((data) => setModels(data))
-//             .catch((error) => console.error("Error fetching models:", error));
-
-//         // Fetch lineage data (for the graph)
-//         fetch("http://127.0.0.1:3000/lineage")
-//             .then((response) => response.json())
-//             .then((data) => {
-//                 const graphData = {
-//                     nodes: Object.keys(data).map((key) => ({ id: key })),
-//                     links: Object.entries(data).flatMap(([key, value]) =>
-//                         value.dependencies.map((dep) => ({
-//                             source: key,
-//                             target: dep,
-//                         }))
-//                     ),
-//                 };
-
-//                 setLineageData(graphData);
-//             })
-//             .catch((error) => console.error("Error fetching lineage data:", error));
-//     }, []);
-
-//     return (
-//         <div style={{ padding: "20px" }}>
-//             <h1>Data Lineage</h1>
-//             <h2>Models</h2>
-//             <ul>
-//                 {models.map((model, index) => (
-//                     <li key={index}>{model}</li>
-//                 ))}
-//             </ul>
-
-//             <h2>Lineage Graph</h2>
-//             <LineageGraph lineageData={lineageData} />
-//         </div>
-//     );
-// };
-
-// export default LineagePage;
