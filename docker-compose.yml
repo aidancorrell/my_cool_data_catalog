@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.9'
 
 services:
   backend:
@@ -8,21 +8,13 @@ services:
       - "3000:3000"
     volumes:
       - ./backend/cache:/backend/cache
-    depends_on:
-      - scheduler
-
-  scheduler:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    volumes:
-      - ./backend/cache:/backend/cache
-    command: ["cron", "-f"]
+      - ./backend/scripts:/backend/scripts
+      - /Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project:/backend/dbt_project
+    environment:
+      - RUST_LOG=info
 
   frontend:
     build:
       context: ./frontend
     ports:
-      - "3001:3001" # Expose the front-end service
-    depends_on:
-      - backend
+      - "3001:3001"

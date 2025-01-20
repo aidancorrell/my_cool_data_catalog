@@ -1,33 +1,30 @@
-# Stage 1: Build the React app
-FROM node:18-alpine as builder
+# Frontend Dockerfile
 
-# Set working directory inside the container
+# Use Node.js for building the frontend
+FROM node:18 as builder
+
+# Set working directory
 WORKDIR /frontend
 
-# Copy package.json and package-lock.json to install dependencies
-COPY ./frontend/package.json ./frontend/package-lock.json ./
-
-# Install dependencies
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy the rest of the frontend source code
-COPY ./frontend ./
-
-# Build the production version of the React app
+# Copy frontend source code and build the app
+COPY . .
 RUN npm run build
 
-# Stage 2: Serve the app using NGINX
-FROM nginx:1.25-alpine
+# Production stage
+FROM nginx:stable-alpine
 
-# Copy the built app from the builder stage to the nginx directory
+# Copy build files to nginx HTML directory
 COPY --from=builder /frontend/build /usr/share/nginx/html
 
-# Remove default NGINX configuration and replace with custom one
-RUN rm /etc/nginx/conf.d/default.conf
-COPY ./frontend/nginx.conf /etc/nginx/conf.d
+# Copy custom nginx configuration if any
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose the port NGINX is running on
-EXPOSE 3001
+# Expose frontend port
+EXPOSE 80
 
-# Start NGINX when the container runs
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

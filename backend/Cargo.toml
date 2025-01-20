@@ -1,7 +1,7 @@
 [package]
 name = "data_catalog_backend"
 version = "0.1.0"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Aidan Correll <appsaidan@gmail.com>"]
 edition = "2021"
 
 [dependencies]
