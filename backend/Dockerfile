@@ -1,8 +1,11 @@
-# Use a Rust image with Debian Bullseye for better compatibility with newer glibc
-FROM rust:1.83-bullseye as builder
+# Backend Dockerfile
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y curl build-essential libssl-dev pkg-config
+# Use the latest Rust version
+FROM rust:1.83-slim as builder
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl build-essential libssl-dev pkg-config python3 python3-pip
 
 # Set the working directory
 WORKDIR /backend
@@ -17,20 +20,27 @@ COPY . .
 RUN cargo build --release
 
 # Runtime stage
-FROM debian:bullseye-slim
+FROM python:3.9-slim
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y libssl1.1 cron && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    libssl3 cron && rm -rf /var/lib/apt/lists/*
+
+# Install dbt
+RUN pip install --no-cache-dir dbt-core dbt-duckdb # Adjust dbt adapter as needed
 
 # Set working directory
 WORKDIR /backend
 
-# Copy the compiled binary from the builder stage
+# Copy compiled binary from the builder stage
 COPY --from=builder /backend/target/release/data_catalog_backend /backend/data_catalog_backend
 
 # Copy cache and scripts
 COPY ./cache /backend/cache
 COPY ./scripts /backend/scripts
+
+# Copy profiles.yml to the appropriate location
+COPY ./profiles.yml /root/.dbt/profiles.yml
 
 # Make the cache refresh script executable
 COPY ./cache/refresh_cache.sh /backend/refresh_cache.sh

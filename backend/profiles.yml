@@ -1,0 +1,8 @@
+default:
+  target: dev
+  outputs:
+    dev:
+      dev:
+      type: duckdb
+      path: /backend/dbt_project/duckdb_data/my_database.duckdb
+      extensions: []

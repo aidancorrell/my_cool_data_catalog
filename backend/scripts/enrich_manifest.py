@@ -1,6 +1,7 @@
 import json
 import os
 
+# DEV notes: unhardcode this to work in docker container
 # Paths to manifest.json and catalog.json
 manifest_path = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project/target/manifest.json"
 catalog_path = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project/target/catalog.json"
