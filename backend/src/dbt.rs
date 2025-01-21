@@ -140,7 +140,7 @@ pub fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<String, S
 
 
 pub async fn get_models() -> Json<Vec<String>> {
-    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
+    let cache_path = "/backend/cache/enriched_manifest.json";
 
     match fs::read_to_string(cache_path) {
         Ok(enriched_manifest) => {
@@ -178,7 +178,7 @@ pub async fn get_models() -> Json<Vec<String>> {
 
 pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0;
-    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
+    let cache_path = "/backend/cache/enriched_manifest.json";
 
     // Load the enriched manifest
     let manifest_data = fs::read_to_string(cache_path)
@@ -251,7 +251,7 @@ pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Va
 
 pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0; // e.g., "my_first_dbt_model"
-    let cache_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json";
+    let cache_path = "/backend/cache/enriched_manifest.json";
 
     // Load the enriched manifest
     let manifest_data = fs::read_to_string(cache_path)

@@ -65,7 +65,7 @@ pub struct Lineage {
 pub async fn get_lineage(
     AxumPath((start_model, end_model)): AxumPath<(String, String)>,
 ) -> Json<Lineage> {
-    let dbt_project_dir = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project";
+    let dbt_project_dir = "/backend/dbt_project";
     let lineage_query = format!("{}+,+{}", start_model, end_model);
     let args = &["ls", "--output", "json", "--models", &lineage_query];
 

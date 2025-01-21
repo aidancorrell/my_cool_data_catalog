@@ -3,9 +3,9 @@ import os
 
 # DEV notes: unhardcode this to work in docker container
 # Paths to manifest.json and catalog.json
-manifest_path = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project/target/manifest.json"
-catalog_path = "/Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project/target/catalog.json"
-enriched_manifest_path = "/Users/aidancorrell/repos/data_catalog/backend/cache/enriched_manifest.json"
+manifest_path = "/backend/dbt_project/target/manifest.json"
+catalog_path = "/backend/dbt_project/target/catalog.json"
+enriched_manifest_path = "/backend/cache/enriched_manifest.json"
 
 # Ensure the output directory exists
 output_dir = os.path.dirname(enriched_manifest_path)
