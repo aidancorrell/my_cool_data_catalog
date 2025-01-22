@@ -86,28 +86,26 @@ const LineageGraph = ({ lineageData }) => {
           {
             selector: "node",
             style: {
-              "background-color": "#0074D9",
+              "background-color": "#f0f0f0", // Light grey background
               shape: "round-rectangle",
               "label": "data(label)",
               "width": "label",
               "height": "label",
-              padding: "8px",
+              padding: "10px",
               "border-width": 2,
-              "border-color": "#ffffff",
+              "border-color": "#0074D9", // Dark blue outline
               "font-size": 12,
               "text-valign": "center",
               "text-halign": "center",
               "font-weight": "bold",
-              "text-wrap": "wrap",
-              "box-shadow": "0px 4px 6px rgba(0, 0, 0, 0.1)",
             },
           },
           {
             selector: "edge",
             style: {
               "width": 3,
-              "line-color": "#ccc",
-              "target-arrow-color": "#ccc",
+              "line-color": "#aaa", // Light grey edges
+              "target-arrow-color": "#aaa",
               "target-arrow-shape": "triangle",
               "arrow-scale": 1.5,
               "curve-style": "bezier",
@@ -116,19 +114,25 @@ const LineageGraph = ({ lineageData }) => {
           {
             selector: "node:selected",
             style: {
-              "background-color": "#FF4136",
-              "border-color": "#FF4136",
-              "box-shadow": "0px 4px 8px rgba(255, 65, 54, 0.3)",
+              "background-color": "#0074D9", // Dark blue on selection
+              "border-color": "#0056A6",
+              color: "#fff",
             },
           },
         ]}
       />
 
-      {selectedModel && (
+{selectedModel && (
         <div style={panelStyles}>
-          <h2>Model Details</h2>
+          <h2 style={{ marginBottom: "10px" }}>{selectedModel}</h2>
           <p>
-            <strong>Selected Model:</strong> {selectedModel}
+            <strong>Description:</strong> Example description here.
+          </p>
+          <p>
+            <strong>Materialized:</strong> table
+          </p>
+          <p>
+            <strong>Schema:</strong> main
           </p>
           <button
             style={{
@@ -148,6 +152,7 @@ const LineageGraph = ({ lineageData }) => {
           </button>
         </div>
       )}
+
     </div>
   );
 };
