@@ -11,21 +11,13 @@ function App() {
   return (
     <Router>
       <div>
-        {/* Navbar */}
-        <nav>
-          <ul>
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/data-sources">Data Sources</Link></li>
-            <li><Link to="/lineage">Lineage</Link></li>
-          </ul>
-        </nav>
-
         {/* Page routing */}
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/data-sources" element={<DataSourcesPage />} />
+          <Route path="/" element={<LineagePage />} />
           <Route path="/lineage" element={<LineagePage />} />
           <Route path="/model-details/:modelName" element={<ModelDetailsPage />} />
+          {/* still in development
+          <Route path="/data-sources" element={<DataSourcesPage />} /> */}
         </Routes>
       </div>
     </Router>

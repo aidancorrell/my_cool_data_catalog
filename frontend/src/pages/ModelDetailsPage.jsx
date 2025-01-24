@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import Layout from "../components/Layout";
+
 
 const ModelDetails = () => {
   const { modelName } = useParams();
@@ -7,7 +11,6 @@ const ModelDetails = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    console.log("Model Name:", modelName);
     if (modelName) {
       fetch(`http://127.0.0.1:3000/model_docs/${modelName}`)
         .then((response) => {
@@ -17,85 +20,85 @@ const ModelDetails = () => {
           return response.json();
         })
         .then((data) => {
-          console.log("Fetched Model Data:", data);
           setModelData(data);
         })
         .catch((err) => {
-          console.error("Error fetching model data:", err);
           setError(err.message);
         });
     }
   }, [modelName]);
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return <div className="text-red-500">Error: {error}</div>;
   }
 
   if (!modelData) {
-    return <div>Loading model details...</div>;
+    return <div className="text-gray-500 italic">Loading model details...</div>;
   }
 
   const { general, columns, sql } = modelData;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Model Details</h1>
+  <Layout>
+    <div className="p-8 bg-gray-100">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Model Details</h1>
+      </header>
 
-      {/* General Information */}
-      <section style={{ marginBottom: "20px" }}>
-        <h2>General Information</h2>
-        <p><strong>Name:</strong> {general.name || "Unknown"}</p>
-        <p><strong>Description:</strong> {general.description || "No description available"}</p>
-        <p><strong>Materialized Type:</strong> {general.materialized || "Unknown"}</p>
-        <p><strong>Schema:</strong> {general.schema || "Unknown"}</p>
-        <p><strong>Database:</strong> {general.database || "Unknown"}</p>
-        <p><strong>Primary Keys:</strong> {general.primary_keys?.join(", ") || "None"}</p>
-        <p><strong>Tags:</strong> {general.tags?.length > 0 ? general.tags.join(", ") : "None"}</p>
+      <section className="mb-6 bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-lg font-semibold text-gray-700 mb-2">General Information</h2>
+        <p>
+          <strong>Name:</strong> {general.name || "Unknown"}
+        </p>
+        <p>
+          <strong>Description:</strong> {general.description || "No description available"}
+        </p>
+        <p>
+          <strong>Materialized Type:</strong> {general.materialized || "Unknown"}
+        </p>
+        <p>
+          <strong>Schema:</strong> {general.schema || "Unknown"}
+        </p>
       </section>
 
-      {/* Columns Table */}
-      <section style={{ marginBottom: "20px" }}>
-        <h2>Columns</h2>
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
+      <section className="mb-6 bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-lg font-semibold text-gray-700 mb-2">Columns</h2>
+        <table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr>
-              <th style={{ borderBottom: "2px solid #ccc", textAlign: "left", padding: "8px" }}>Name</th>
-              <th style={{ borderBottom: "2px solid #ccc", textAlign: "left", padding: "8px" }}>Description</th>
-              <th style={{ borderBottom: "2px solid #ccc", textAlign: "left", padding: "8px" }}>Data Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Description
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Data Type
+              </th>
             </tr>
           </thead>
           <tbody>
             {columns.map((col, index) => (
               <tr key={index}>
-                <td style={{ borderBottom: "1px solid #eee", padding: "8px" }}>{col.name}</td>
-                <td style={{ borderBottom: "1px solid #eee", padding: "8px" }}>
+                <td className="px-6 py-4 text-sm text-gray-800">{col.name}</td>
+                <td className="px-6 py-4 text-sm text-gray-800">
                   {col.description || "No description available"}
                 </td>
-                <td style={{ borderBottom: "1px solid #eee", padding: "8px" }}>
-                  {col.type || "Unknown"}
-                </td>
+                <td className="px-6 py-4 text-sm text-gray-800">{col.type || "Unknown"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
 
-      {/* SQL Information */}
-      <section>
-        <h2>SQL</h2>
-        <p><strong>Relation Name:</strong> {sql.relation_name || "Unknown"}</p>
-        <pre
-          style={{
-            backgroundColor: "#f4f4f4",
-            padding: "10px",
-            borderRadius: "5px",
-            overflowX: "auto",
-          }}
-        >
+      <section className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-lg font-semibold text-gray-700 mb-2">SQL</h2>
+        <SyntaxHighlighter language="sql" style={dracula}>
           {sql.raw_code || "No SQL code available"}
-        </pre>
+        </SyntaxHighlighter>
       </section>
     </div>
+  </Layout>
   );
 };
 

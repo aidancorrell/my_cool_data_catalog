@@ -9,12 +9,25 @@ services:
     volumes:
       - ./backend/cache:/backend/cache
       - ./backend/scripts:/backend/scripts
-      - /Users/aidancorrell/repos/my_cool_dbt_repo/my_cool_dbt_project:/backend/dbt_project
+      - /absolute/path/to/your/dbt_project:/backend/dbt_project # be sure to update this path with your dbt project path
     environment:
       - RUST_LOG=info
 
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "8080:80" # The container's port 80 is mapped to port 8080
+    restart: always # Restart the container if it crashes
+
+  # for local dev
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  # ports:
+  #   - "3001:3001"
+  # environment:
+  #   - PORT=3001
+  # volumes:
+  #   - ./frontend:/frontend  # Mount the local frontend folder for live reloading

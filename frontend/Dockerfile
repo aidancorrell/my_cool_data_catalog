@@ -1,5 +1,15 @@
 # Frontend Dockerfile
 
+# for local dev:
+# FROM node:18 as builder
+# WORKDIR /frontend
+# COPY package.json package-lock.json ./
+# RUN npm install
+# COPY . .
+# EXPOSE 3001
+# CMD ["npm", "start"]
+
+# For production:
 # Use Node.js for building the frontend
 FROM node:18 as builder
 
