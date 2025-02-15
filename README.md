@@ -6,9 +6,14 @@
 
 ## Features
 - Interactive lineage graphs for dbt models.
-- Metadata exploration.
+- Metadata exploration and search.
 - Modern and responsive UI built with React.
 - Dockerized for easy setup.
+
+## Feature Requests
+- compiled model sql
+- downstream exposures (BI Viz Tools)
+- visualization layers in lineage graph (materialization, directory, etc) (IN DEV)
 
 ---
 
