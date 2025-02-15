@@ -321,7 +321,11 @@ pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json
 }
 
 
-
+pub async fn get_manifest() -> String {
+    let manifest_content = fs::read_to_string("/backend/cache/enriched_manifest.json")
+        .unwrap_or_else(|_| "{}".to_string());
+    manifest_content
+}
 
 
 

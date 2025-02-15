@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import DataSourcesPage from './pages/DataSourcesPage';
 import LineagePage from './pages/LineagePage';
 import ModelDetailsPage from "./pages/ModelDetailsPage";
+import ModelSearchPage from "./pages/ModelSearchPage";
 
 function App() {
   return (
@@ -15,7 +16,9 @@ function App() {
         <Routes>
           <Route path="/" element={<LineagePage />} />
           <Route path="/lineage" element={<LineagePage />} />
+          <Route path="/model-search" element={<ModelSearchPage />} />
           <Route path="/model-details/:modelName" element={<ModelDetailsPage />} />
+          {/* <Route path="*" element={<Navigate to="/model-details" />} /> */}
           {/* still in development
           <Route path="/data-sources" element={<DataSourcesPage />} /> */}
         </Routes>

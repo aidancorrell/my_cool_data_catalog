@@ -6,7 +6,7 @@ const Sidebar = () => {
   const menuItems = [
     { name: "Lineage Graph", to: "/lineage", icon: "📈" },
     // still in development
-    // { name: "Model Details", to: "/model-details", icon: "📊" },
+    { name: "Model Details", to: "/model-search/", icon: "📊" },
   ];
 
   return (
