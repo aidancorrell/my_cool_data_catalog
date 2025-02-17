@@ -1,12 +1,12 @@
 // src/components/Sidebar.jsx
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { FaProjectDiagram, FaSearch } from "react-icons/fa"; // Import icons
 
 const Sidebar = () => {
   const menuItems = [
-    { name: "Lineage Graph", to: "/lineage", icon: "📈" },
-    // still in development
-    { name: "Model Details", to: "/model-search/", icon: "📊" },
+    { name: "Lineage Graph", to: "/lineage", icon: <FaProjectDiagram size={20} /> },
+    { name: "Model Details", to: "/model-search/", icon: <FaSearch size={20} /> },
   ];
 
   return (

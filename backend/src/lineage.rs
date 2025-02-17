@@ -25,6 +25,8 @@ pub struct Lineage {
     models: Vec<ModelMetadata>,
 }
 
+const DBT_PROJECT_DIR: &str = "/backend/dbt_project";
+
 /// Helper function to run a DBT command and clean the output
 // fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<Output, String> {
 //     if !Path::new(dbt_project_dir).exists() {
@@ -65,7 +67,7 @@ pub struct Lineage {
 pub async fn get_lineage(
     AxumPath((start_model, end_model)): AxumPath<(String, String)>,
 ) -> Json<Lineage> {
-    let dbt_project_dir = "/backend/dbt_project";
+    let dbt_project_dir = DBT_PROJECT_DIR;
     let lineage_query = format!("{}+,+{}", start_model, end_model);
     let args = &["ls", "--output", "json", "--models", &lineage_query];
 

@@ -42,7 +42,7 @@ const LineagePage = () => {
           />
         </div>
         {lineageData ? (
-          <LineageGraph lineageData={lineageData} />
+          <LineageGraph lineageData={lineageData} models={models}/>
         ) : (
           <p className="text-gray-500">Select nodes to view the lineage graph.</p>
         )}

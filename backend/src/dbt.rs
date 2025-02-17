@@ -71,6 +71,8 @@ pub struct Dependencies {
     pub nodes: Option<Vec<String>>,
 }
 
+const MANIFEST_PATH: &str = "/backend/cache/enriched_manifest.json";
+
 /// Clean the output of DBT command to remove logs and retain only JSON.
 pub fn clean_dbt_output(output: &[u8]) -> String {
     let stdout = str::from_utf8(output).unwrap_or_default();
@@ -140,8 +142,7 @@ pub fn run_dbt_command(dbt_project_dir: &str, args: &[&str]) -> Result<String, S
 
 
 pub async fn get_models() -> Json<Vec<String>> {
-    let cache_path = "/backend/cache/enriched_manifest.json";
-
+    let cache_path = MANIFEST_PATH;
     match fs::read_to_string(cache_path) {
         Ok(enriched_manifest) => {
             let manifest_json: serde_json::Value = match serde_json::from_str(&enriched_manifest) {
@@ -178,8 +179,7 @@ pub async fn get_models() -> Json<Vec<String>> {
 
 pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0;
-    let cache_path = "/backend/cache/enriched_manifest.json";
-
+    let cache_path = MANIFEST_PATH;
     // Load the enriched manifest
     let manifest_data = fs::read_to_string(cache_path)
         .expect("Failed to read enriched_manifest.json. Ensure the cache is built.");
@@ -251,8 +251,7 @@ pub async fn get_model_docs(path_params: axum::extract::Path<String>) -> Json<Va
 
 pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json<Value> {
     let model_id = path_params.0; // e.g., "my_first_dbt_model"
-    let cache_path = "/backend/cache/enriched_manifest.json";
-
+    let cache_path = MANIFEST_PATH;
     // Load the enriched manifest
     let manifest_data = fs::read_to_string(cache_path)
         .expect("Failed to read enriched_manifest.json. Ensure the cache is built.");
@@ -322,7 +321,8 @@ pub async fn get_model_details(path_params: axum::extract::Path<String>) -> Json
 
 
 pub async fn get_manifest() -> String {
-    let manifest_content = fs::read_to_string("/backend/cache/enriched_manifest.json")
+    let cache_path = MANIFEST_PATH;
+    let manifest_content = fs::read_to_string(cache_path)
         .unwrap_or_else(|_| "{}".to_string());
     manifest_content
 }

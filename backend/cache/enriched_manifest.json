@@ -160,7 +160,7 @@
                 "tags": [],
                 "meta": {},
                 "group": null,
-                "materialized": "table",
+                "materialized": "view",
                 "incremental_strategy": null,
                 "batch_size": null,
                 "lookback": 1,
